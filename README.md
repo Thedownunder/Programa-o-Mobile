@@ -1,4 +1,4 @@
-# Stateful Click Counter
+# Lista de afazeres
 
 A new Flutter project created with FlutLab - https://flutlab.io
 

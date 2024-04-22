@@ -1,98 +1,112 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   runApp(MyApp());
 }
 
-class Task {
-  String title;
-  bool completed;
+class Tarefa {
+  String titulo;
+  bool concluida;
 
-  Task(this.title, {this.completed = false});
+  Tarefa(this.titulo, {this.concluida = false});
 }
 
-class MyApp extends StatelessWidget {
+class ProvedorTarefas extends ChangeNotifier {
+  List<Tarefa> _tarefas = [];
+
+  List<Tarefa> get tarefas => _tarefas;
+
+  void adicionarTarefa(Tarefa tarefa) {
+    _tarefas.add(tarefa);
+    notifyListeners();
+  }
+
+  void removerTarefa(int indice) {
+    _tarefas.removeAt(indice);
+    notifyListeners();
+  }
+
+  void alternarConclusaoTarefa(int indice, bool novoValor) {
+    _tarefas[indice].concluida = novoValor;
+    notifyListeners();
+  }
+}
+
+class MeuApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'To-Do List',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+    return ChangeNotifierProvider(
+      create: (context) => ProvedorTarefas(),
+      child: MaterialApp(
+        title: 'Lista de Tarefas',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: TelaListaTarefas(),
       ),
-      home: TaskListScreen(),
     );
   }
 }
 
-class TaskListScreen extends StatefulWidget {
-  @override
-  _TaskListScreenState createState() => _TaskListScreenState();
-}
-
-class _TaskListScreenState extends State<TaskListScreen> {
-  List<Task> tasks = [];
-
+class TelaListaTarefas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final provedorTarefas = Provider.of<ProvedorTarefas>(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('To-Do List'),
+        title: Text('Lista de Tarefas'),
       ),
-      body: ListView.builder(
-        itemCount: tasks.length,
-        itemBuilder: (context, index) {
-          return Dismissible(
-            key: Key(tasks[index].title),
-            onDismissed: (direction) {
-              setState(() {
-                tasks.removeAt(index);
-              });
+      body: Consumer<ProvedorTarefas>(
+        builder: (context, provedorTarefas, _) {
+          return ListView.builder(
+            itemCount: provedorTarefas.tarefas.length,
+            itemBuilder: (context, indice) {
+              final tarefa = provedorTarefas.tarefas[indice];
+              return Dismissible(
+                key: Key(tarefa.titulo),
+                onDismissed: (direcao) {
+                  provedorTarefas.removerTarefa(indice);
+                },
+                child: CheckboxListTile(
+                  title: Text(tarefa.titulo),
+                  value: tarefa.concluida,
+                  onChanged: (novoValor) {
+                    provedorTarefas.alternarConclusaoTarefa(indice, novoValor!);
+                  },
+                ),
+              );
             },
-            child: CheckboxListTile(
-              title: Text(tasks[index].title),
-              value: tasks[index].completed,
-              onChanged: (newValue) {
-                setState(() {
-                  tasks[index].completed = newValue!;
-                });
-              },
-            ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final newTask = await Navigator.push(
+          final novaTarefa = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AddTaskScreen()),
+            MaterialPageRoute(builder: (context) => TelaAdicionarTarefa()),
           );
-          if (newTask != null) {
-            setState(() {
-              tasks.add(newTask);
-            });
+          if (novaTarefa != null) {
+            provedorTarefas.adicionarTarefa(novaTarefa);
           }
         },
-        tooltip: 'Add Task',
+        tooltip: 'Adicionar Tarefa',
         child: Icon(Icons.add),
       ),
     );
   }
 }
 
-class AddTaskScreen extends StatefulWidget {
-  @override
-  _AddTaskScreenState createState() => _AddTaskScreenState();
-}
-
-class _AddTaskScreenState extends State<AddTaskScreen> {
-  final TextEditingController _taskController = TextEditingController();
+class TelaAdicionarTarefa extends StatelessWidget {
+  final TextEditingController _controladorTarefa = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Task'),
+        title: Text('Adicionar Tarefa'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -100,20 +114,20 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             TextField(
-              controller: _taskController,
-              decoration: InputDecoration(labelText: 'Task Title'),
+              controller: _controladorTarefa,
+              decoration: InputDecoration(labelText: 'Título da Tarefa'),
             ),
             SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () {
-                if (_taskController.text.isNotEmpty) {
+                if (_controladorTarefa.text.isNotEmpty) {
                   Navigator.pop(
                     context,
-                    Task(_taskController.text),
+                    Tarefa(_controladorTarefa.text),
                   );
                 }
               },
-              child: Text('Add'),
+              child: Text('Adicionar'),
             ),
           ],
         ),
@@ -123,7 +137,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   @override
   void dispose() {
-    _taskController.dispose();
+    _controladorTarefa.dispose();
     super.dispose();
   }
 }
